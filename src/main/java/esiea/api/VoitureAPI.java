@@ -36,7 +36,10 @@ public class VoitureAPI {
 			ret.put("voiture", getVoiture(param));
 		}
 		else {
-			liste.put(getVoiture(param));
+			voitures = getVoiture(param);
+			for (Voiture v : voitures) {
+				liste.put(v);
+			}
 			ret.put("voitures", liste);
 		}
 		return ret.toString();
@@ -55,8 +58,12 @@ public class VoitureAPI {
 		JSONObject json = new JSONObject(saisieJson);
 		boolean succes = false;
 		try {
-			new VoitureDAO().ajouterVoiture(voitureFromJson(json));
-			succes = true;
+			Voiture v = voitureFromJson(json);
+			if (v.check()) {
+				new VoitureDAO().ajouterVoiture(v);
+				succes = true;
+			}
+			
 		} catch (SQLException sql) {
 			sql.printStackTrace();
 		}
@@ -104,8 +111,8 @@ public class VoitureAPI {
 	 * @param id L'ID de la voiture à récupérer en base
 	 * @return Retourne une voiture sous forme d'objet voiture
 	 */
-	public Voiture getVoiture(String param) {
-		Voiture ret = null;
+	public Voiture[] getVoiture(String param) {
+		Voiture[] ret = null;
 		try {
 			ret = new VoitureDAO().getVoiture(param);
 		} catch (SQLException sql) {
@@ -121,7 +128,7 @@ public class VoitureAPI {
 		} if(json.has("marque")) {
 			voiture.setMarque(json.getString("marque"));
 		} if(json.has("modele")) {
-			voiture.setMarque(json.getString("modele"));
+			voiture.setModele(json.getString("modele"));
 		} if(json.has("finition")) {
 			voiture.setFinition(json.getString("finition"));
 		} if(json.has("carburant")) {
