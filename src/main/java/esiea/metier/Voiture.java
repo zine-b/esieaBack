@@ -109,6 +109,25 @@ public class Voiture {
 		return true;
 	}
 
+	public static String getTypeDonnee(String donnee) {
+		String[] strings = {"marque", "modele", "finition" };
+		String[] entiers = {"id", "annee", "km", "prix"};
+		
+		if(donnee != null) {
+			for (String attribut : strings) {
+				if(attribut.equals(donnee)) {
+					return "string";
+				}
+			} 
+			for (String attribut : entiers) {
+				if(attribut.equals(donnee)) {
+					return "entier";
+				}
+			}
+		}
+		return "";
+	}
+	
 	public enum Carburant {
 		ESSENCE("E"),
 		DIESEL("D"),
