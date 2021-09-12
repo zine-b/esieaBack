@@ -22,7 +22,7 @@ public class VoitureDAO {
 	private String pwd = "brice";
 	
 	public VoitureDAO() {
-		/*try {
+		try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			if (connection == null) {
 				connection = DriverManager.getConnection(url, user, pwd);
@@ -31,11 +31,11 @@ public class VoitureDAO {
 		catch (ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
+		}
 	}
 	
 	public void ajouterVoiture(Voiture voiture) throws SQLException {
-		/*String requete = "INSERT INTO Voiture (marque, modele, finition, carburant, km, annee, prix), "
+		String requete = "INSERT INTO Voiture (marque, modele, finition, carburant, km, annee, prix) VALUES  "
 				+ "(?,?,?,?,?,?,?)";
 		PreparedStatement stmt = connection.prepareStatement(requete);
 		stmt.setString(1, voiture.getMarque());
@@ -45,7 +45,7 @@ public class VoitureDAO {
 		stmt.setInt(5, voiture.getKm());
 		stmt.setInt(6, voiture.getAnnee());
 		stmt.setInt(7, voiture.getPrix());
-		stmt.executeQuery();*/
+		stmt.executeUpdate();
 	}
 	
 	public void modifierVoiture(int id, Voiture nouvelle) throws SQLException {
@@ -69,7 +69,7 @@ public class VoitureDAO {
 		stmt.executeQuery();
 	}
 	
-	public Voiture getVoiture(String saisie) throws SQLException {
+	public Voiture[] getVoiture(String saisie) throws SQLException {
 		HashMap<String, String> criteres = new HashMap<String, String>();
 		if(StringUtils.estEntier(saisie)) {
 			criteres.put("id", saisie);
@@ -77,65 +77,64 @@ public class VoitureDAO {
 			criteres.put("masque", saisie);
 		}
 		Voiture[] ret = getVoitures(criteres);
-		if (ret.length > 0) {
-			return ret[0];
-		}
-		return null;
+	//	if (ret.length > 0 && StringUtils.estEntier(saisie)) {
+			return ret;
+	//	}
+		//return null;
 	}
 	
 	public Voiture[] getVoitures(HashMap<String, String> criteres) throws SQLException {
 		String requete = "SELECT id, marque, modele, finition, carburant, km, annee, prix "
 				+ "FROM Voiture ";
+		String masque = null;
+		int nbCol = 0;
 		if (criteres != null && !criteres.isEmpty()) {
 			requete += "WHERE ";
-			String masque = criteres.get("masque");
+			masque = criteres.get("masque");
 			if (masque != null) {
 				requete += construireRequeteMasque(masque);
-				/*String[] mots = masque.split(" ");
-				for(String mot : mots) {
-					
-				}*/
+				nbCol = StringUtils.nbOccurrence(requete, '?')/masque.split(" ").length;
 			} else {
 				for(String colonne : criteres.keySet()) {
-					requete += colonne + " = ?";
-					//TODO virgule si pas dernier
+					requete += colonne + " = ?,";
+				}
+				//retrait de la dernière virgule
+				requete = requete.substring(0, requete.length()-1);
+			}
+		}
+		
+		PreparedStatement stmt = connection.prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		int cpt =1;
+		if (criteres != null) {
+			if (masque == null) {
+				for(String colonne : criteres.keySet()) {
+					if("string".equals(Voiture.getTypeDonnee(colonne))) {
+						stmt.setString(cpt, criteres.get(colonne));
+					}
+					if("entier".equals(Voiture.getTypeDonnee(colonne))) {
+						stmt.setInt(cpt, Integer.parseInt(criteres.get(colonne)));
+					}
+					cpt++;
+				}
+			} else if (masque != null) {
+				String[] mots = masque.split(" ");
+				int indexMot = 0;
+				for (String mot : mots) {
+					for (int i=1; i< nbCol+1; i++) {
+						stmt.setString(indexMot * nbCol + i, "%"+mot+"%");
+					}
+					indexMot++;
 				}
 			}
 		}
-		Voiture[] ret = new Voiture[2];
-		Voiture v1 = new Voiture();
-		v1.setId(1);
-		v1.setMarque("Séat");
-		v1.setModele("Ibiza");
-		v1.setFinition("Copa");
-		v1.setCarburant(Carburant.ESSENCE);
-		v1.setKm(146500);
-		v1.setAnnee(2011);
-		v1.setPrix(3000);
-		Voiture v2 = new Voiture();
-		v2.setId(2);
-		v2.setMarque("Renault");
-		v2.setModele("Vel Satis");
-		v2.setFinition("Initiale");
-		v2.setCarburant(Carburant.DIESEL);
-		v2.setKm(162000);
-		v2.setAnnee(2008);
-		v2.setPrix(4990);
-		
-		ret[0] = v1;
-		ret[1] = v2;
-		/*Voiture[] ret = new Voiture[res.getRow()];
-		PreparedStatement stmt = connection.prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-		for(String colonne : criteres.keySet()) {
-				
-		}
 		ResultSet res = stmt.executeQuery();
 		res.last();
+		Voiture[] ret = new Voiture[res.getRow()];
 		res.beforeFirst();
-		int cpt = 0;
+		cpt = 0;
 		while (res.next()) {
 			ret[cpt++] = setVoiture(res);
-		}*/
+		}
 		return ret;
 	}
 	
@@ -144,21 +143,15 @@ public class VoitureDAO {
 		String[] colonnes = {"marque", "modele", "finition", "carburant"};
 		String[] mots = saisie.split(" ");
 		boolean or = false;
-		for (String col : colonnes) {
-			if (or) {
-				sb.append(" OR ");
-			}
-			sb.append(col);
-			sb.append(" in (");
-			boolean virgule = false;
-			for (String mot : mots) {
-				if (virgule) {
-					sb.append(" , ");
+		for (int i=0; i<mots.length; i++) {
+			for (String col : colonnes) {
+				if (or) {
+					sb.append(" OR ");
 				}
-				sb.append("?");
+				sb.append(col);
+				sb.append(" like ? ");
+				or = true;
 			}
-			sb.append(")");
-			or = true;
 		}
 		return sb.toString();
 	}
@@ -180,7 +173,7 @@ public class VoitureDAO {
 		String requete = "DELETE FROM Voiture WHERE id = ?";
 		PreparedStatement stmt = connection.prepareStatement(requete);
 		stmt.setString(1, id);
-		stmt.executeQuery();
+		stmt.executeUpdate();
 	}
 
 }
