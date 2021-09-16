@@ -18,8 +18,8 @@ public class VoitureDAO {
 	
 	private static Connection connection;
 	private String url = "jdbc:mysql://localhost:3306/stockcar";
-	private String user = "brice";
-	private String pwd = "brice";
+	private String user = "root";
+	private String pwd = "root";
 	
 	public VoitureDAO() {
 		try {
