@@ -5,10 +5,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.HashMap;
-
-import com.mysql.cj.xdevapi.PreparableStatement;
 
 import esiea.metier.Voiture;
 import esiea.metier.Voiture.Carburant;
@@ -16,12 +13,16 @@ import utils.StringUtils;
 
 public class VoitureDAO {
 	
-	private static Connection connection;
+	private Connection connection;
 	private String url = "jdbc:mysql://localhost:3306/stockcar";
 	private String user = "brice";
 	private String pwd = "brice";
 	
 	public VoitureDAO() {
+		
+	}
+	
+	private Connection getConnexion() {
 		try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			if (connection == null) {
@@ -32,12 +33,19 @@ public class VoitureDAO {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return connection;
+	}
+	
+	private void deconnecter() throws SQLException {
+		if(connection != null) {
+			connection.close();
+		}
 	}
 	
 	public void ajouterVoiture(Voiture voiture) throws SQLException {
 		String requete = "INSERT INTO Voiture (marque, modele, finition, carburant, km, annee, prix) VALUES  "
 				+ "(?,?,?,?,?,?,?)";
-		PreparedStatement stmt = connection.prepareStatement(requete);
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
 		stmt.setString(1, voiture.getMarque());
 		stmt.setString(2, voiture.getModele());
 		stmt.setString(3, voiture.getFinition());
@@ -46,6 +54,7 @@ public class VoitureDAO {
 		stmt.setInt(6, voiture.getAnnee());
 		stmt.setInt(7, voiture.getPrix());
 		stmt.executeUpdate();
+		deconnecter();
 	}
 	
 	public void modifierVoiture(int id, Voiture nouvelle) throws SQLException {
@@ -57,7 +66,7 @@ public class VoitureDAO {
 				+ "annee = ?, "
 				+ "prix = ?), "
 				+ "WHERE id = ?";
-		PreparedStatement stmt = connection.prepareStatement(requete);
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
 		stmt.setString(1, nouvelle.getMarque());
 		stmt.setString(2, nouvelle.getModele());
 		stmt.setString(3, nouvelle.getFinition());
@@ -67,6 +76,7 @@ public class VoitureDAO {
 		stmt.setInt(7, nouvelle.getPrix());
 		stmt.setInt(8, id);
 		stmt.executeQuery();
+		deconnecter();
 	}
 	
 	public Voiture[] getVoiture(String saisie) throws SQLException {
@@ -103,7 +113,7 @@ public class VoitureDAO {
 			}
 		}
 		
-		PreparedStatement stmt = connection.prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 		int cpt =1;
 		if (criteres != null) {
 			if (masque == null) {
@@ -135,6 +145,7 @@ public class VoitureDAO {
 		while (res.next()) {
 			ret[cpt++] = setVoiture(res);
 		}
+		deconnecter();
 		return ret;
 	}
 	
@@ -171,9 +182,10 @@ public class VoitureDAO {
 	
 	public void supprimerVoiture(String id) throws SQLException {
 		String requete = "DELETE FROM Voiture WHERE id = ?";
-		PreparedStatement stmt = connection.prepareStatement(requete);
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
 		stmt.setString(1, id);
 		stmt.executeUpdate();
+		deconnecter();
 	}
 
 }
