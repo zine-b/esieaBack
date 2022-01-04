@@ -104,7 +104,7 @@ public class Voiture {
 		if (km < 0) { return false; }
 		Calendar calendar = Calendar.getInstance();
 		calendar.setTime(new Date());
-		if (annee < 1900 || annee >	calendar.get(Calendar.YEAR));
+		if (annee < 1900 || annee >	calendar.get(Calendar.YEAR)) { return false; }
 		if (prix < 0) { return false; }
 		return true;
 	}
