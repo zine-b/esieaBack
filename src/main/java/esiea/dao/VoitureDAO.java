@@ -9,14 +9,12 @@ import java.util.HashMap;
 
 import esiea.metier.Voiture;
 import esiea.metier.Voiture.Carburant;
+import utils.Configuration;
 import utils.StringUtils;
 
 public class VoitureDAO {
 	
 	private Connection connection;
-	private String url = "jdbc:mysql://localhost:3306/stockcar";
-	private String user = "root";
-	private String pwd = "root";
 	
 	public VoitureDAO() {
 		
@@ -26,7 +24,7 @@ public class VoitureDAO {
 		try {
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			if (connection == null) {
-				connection = DriverManager.getConnection(url, user, pwd);
+				connection = DriverManager.getConnection(getUrlBase(), Configuration.getConfig("bdd.utilisateur"), Configuration.getConfig("bdd.mdp"));
 			}
 		} catch (SQLException sql) {sql.printStackTrace(); } 
 		catch (ClassNotFoundException e) {
@@ -34,6 +32,14 @@ public class VoitureDAO {
 			e.printStackTrace();
 		}
 		return connection;
+	}
+	
+	public String getUrlBase() {
+		String url = "jdbc:mysql://";
+		url += Configuration.getConfig("bdd.serveur");
+		url += ":" + Configuration.getConfig("bdd.port");
+		url += "/" + Configuration.getConfig("bdd.nom");
+		return url;
 	}
 	
 	private void deconnecter() throws SQLException {
