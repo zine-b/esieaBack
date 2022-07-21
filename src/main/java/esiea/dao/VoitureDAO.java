@@ -28,7 +28,6 @@ public class VoitureDAO {
 			}
 		} catch (SQLException sql) {sql.printStackTrace(); } 
 		catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return connection;
@@ -85,21 +84,21 @@ public class VoitureDAO {
 		deconnecter();
 	}
 	
-	public Voiture[] getVoiture(String saisie) throws SQLException {
+	public Voiture[] getVoiture(String saisie, int mini, int nbVoitures) throws SQLException {
 		HashMap<String, String> criteres = new HashMap<String, String>();
 		if(StringUtils.estEntier(saisie)) {
 			criteres.put("id", saisie);
 		} else {
 			criteres.put("masque", saisie);
 		}
-		Voiture[] ret = getVoitures(criteres);
+		Voiture[] ret = getVoitures(criteres, mini, nbVoitures);
 	//	if (ret.length > 0 && StringUtils.estEntier(saisie)) {
 			return ret;
 	//	}
 		//return null;
 	}
 	
-	public Voiture[] getVoitures(HashMap<String, String> criteres) throws SQLException {
+	public Voiture[] getVoitures(HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
 		String requete = "SELECT id, marque, modele, finition, carburant, km, annee, prix "
 				+ "FROM Voiture ";
 		String masque = null;
@@ -118,8 +117,9 @@ public class VoitureDAO {
 				requete = requete.substring(0, requete.length()-1);
 			}
 		}
-		
-		PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		requete += " LIMIT ? OFFSET ?";
+		return null;
+		/*PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 		int cpt =1;
 		if (criteres != null) {
 			if (masque == null) {
@@ -137,12 +137,15 @@ public class VoitureDAO {
 				int indexMot = 0;
 				for (String mot : mots) {
 					for (int i=1; i< nbCol+1; i++) {
-						stmt.setString(indexMot * nbCol + i, "%"+mot+"%");
+						cpt = indexMot * nbCol + i;
+						stmt.setString(cpt, "%"+mot+"%");
 					}
 					indexMot++;
 				}
 			}
 		}
+		stmt.setInt(cpt++, mini);
+		stmt.setInt(cpt++, nbVoitures);
 		ResultSet res = stmt.executeQuery();
 		res.last();
 		Voiture[] ret = new Voiture[res.getRow()];
@@ -152,7 +155,7 @@ public class VoitureDAO {
 			ret[cpt++] = setVoiture(res);
 		}
 		deconnecter();
-		return ret;
+		return ret;*/
 	}
 	
 	public String construireRequeteMasque(String saisie) {
