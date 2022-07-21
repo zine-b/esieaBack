@@ -2,11 +2,13 @@ package esiea.api;
 
 import java.sql.SQLException;
 
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,30 +20,43 @@ import utils.StringUtils;
 
 @Path("/voiture")
 public class VoitureAPI {
-	 
+	
+	private VoitureDAO vDao = new VoitureDAO();
+	
 	@Path("get/{param}")
 	@GET
 	@Produces("application/json")
 	public String getVoituresJson(@PathParam("param") String param) {
+		return getVoituresJson(param, "1", "1");
+	}
+	
+	@Path("get/{param}/{mini}/{nbVoitures}")
+	@GET
+	@Produces("application/json")
+	public String getVoituresJson(@PathParam("param") String param, 
+			@PathParam("mini") String miniS, 
+			@PathParam("nbVoitures") String nbVoituresS) {
+		int mini = Integer.parseInt(miniS), nbVoitures = Integer.parseInt(nbVoituresS);
 		Voiture[] voitures;
 		JSONObject ret = new JSONObject();
 		JSONArray liste = new JSONArray();
 		if ("all".equals(param)) { 
-			voitures = getToutesVoitures();
+			voitures = getToutesVoitures(mini, nbVoitures);
 			for (Voiture v : voitures) {
 				liste.put(v);
 			}
 			ret.put("voitures", liste);
 		} else  if (StringUtils.estEntier(param)){
-			ret.put("voiture", getVoiture(param));
+			ret.put("voiture", getVoiture(param, mini, nbVoitures));
 		}
 		else {
-			voitures = getVoiture(param);
+			voitures = getVoiture(param, mini, nbVoitures);
 			for (Voiture v : voitures) {
 				liste.put(v);
 			}
 			ret.put("voitures", liste);
 		}
+		ret.put("nbVoitures", liste.length());
 		return ret.toString();
 	}
 	
@@ -60,7 +75,7 @@ public class VoitureAPI {
 		try {
 			Voiture v = voitureFromJson(json);
 			if (v.check()) {
-				new VoitureDAO().ajouterVoiture(v);
+				vDao.ajouterVoiture(v);
 				succes = true;
 			}
 			
@@ -82,7 +97,7 @@ public class VoitureAPI {
 	public String supprimerVoiture(String id) {
 		boolean succes = false;
 		try {
-			new VoitureDAO().supprimerVoiture(id);
+			vDao.supprimerVoiture(id);
 			succes = true;
 		} catch (SQLException sql) {
 			sql.printStackTrace();
@@ -96,10 +111,44 @@ public class VoitureAPI {
 	 * Récupère toutes les voitures en base
 	 * @return Retourne un ensemble de voitures sous forme de tableau de Voitures
 	 */
-	public Voiture[] getToutesVoitures() {
-		Voiture[] ret = new Voiture[0];
+	public Voiture[] getToutesVoitures(int mini, int nbVoitures) {
+		Voiture[] ret = new Voiture[16];
 		try {
-			ret = new VoitureDAO().getVoitures(null);
+			ret = vDao.getVoitures(null, mini, nbVoitures);
+			/*vDao.getVoitures(null, mini, nbVoitures);
+			ret[0] = new Voiture();
+			ret[0].setAnnee(2008);
+			ret[0].setCarburant(Carburant.DIESEL);
+			ret[0].setFinition("Initiale");
+			ret[0].setId(1);
+			ret[0].setKm(174826);
+			ret[0].setMarque("Renault");
+			ret[0].setModele("VelSatis");
+			ret[0].setPrix(4600);
+			
+			ret[1] = new Voiture();
+			ret[1].setAnnee(2013);
+			ret[1].setCarburant(Carburant.DIESEL);
+			ret[1].setFinition("Business");
+			ret[1].setId(2);
+			ret[1].setKm(124987);
+			ret[1].setMarque("Renault");
+			ret[1].setModele("Scénic");
+			ret[1].setPrix(8800);
+
+			ret[2] = new Voiture();
+			ret[2].setAnnee(2018);
+			ret[2].setCarburant(Carburant.DIESEL);
+			ret[2].setFinition("Feel");
+			ret[2].setId(3);
+			ret[2].setKm(78730);
+			ret[2].setMarque("Citroën");
+			ret[2].setModele("Spacetourer");
+			ret[2].setPrix(29000);
+			
+			for (int i=3; i< ret.length; i++) {
+				ret[i] = ret[i%3];
+			}*/
 		} catch (SQLException sql) {
 			sql.printStackTrace();
 		}
@@ -111,10 +160,10 @@ public class VoitureAPI {
 	 * @param id L'ID de la voiture à récupérer en base
 	 * @return Retourne une voiture sous forme d'objet voiture
 	 */
-	public Voiture[] getVoiture(String param) {
+	public Voiture[] getVoiture(String param, int mini, int nbVoitures) {
 		Voiture[] ret = null;
 		try {
-			ret = new VoitureDAO().getVoiture(param);
+			ret = vDao.getVoiture(param, mini, nbVoitures);
 		} catch (SQLException sql) {
 			sql.printStackTrace();
 		}
