@@ -1,194 +1,200 @@
-package esiea.api;
+package esiea.dao;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
 
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import esiea.dao.VoitureDAO;
 import esiea.metier.Voiture;
 import esiea.metier.Voiture.Carburant;
+import utils.Configuration;
 import utils.StringUtils;
 
-@Path("/voiture")
-public class VoitureAPI {
+public class VoitureDAO {
 	
-	private VoitureDAO vDao = new VoitureDAO();
+	private Connection connection;
 	
-	@Path("get/{param}")
-	@GET
-	@Produces("application/json")
-	public String getVoituresJson(@PathParam("param") String param) {
-		return getVoituresJson(param, "1", "1");
+	public VoitureDAO() {
+		
 	}
 	
-	@Path("get/{param}/{mini}/{nbVoitures}")
-	@GET
-	@Produces("application/json")
-	public String getVoituresJson(@PathParam("param") String param, 
-			@PathParam("mini") String miniS, 
-			@PathParam("nbVoitures") String nbVoituresS) {
-		int mini = Integer.parseInt(miniS), nbVoitures = Integer.parseInt(nbVoituresS);
-		Voiture[] voitures;
-		JSONObject ret = new JSONObject();
-		JSONArray liste = new JSONArray();
-		if ("all".equals(param)) { 
-			voitures = getToutesVoitures(mini, nbVoitures);
-			for (Voiture v : voitures) {
-				liste.put(v);
-			}
-			ret.put("voitures", liste);
-		} else  if (StringUtils.estEntier(param)){
-			ret.put("voiture", getVoiture(param, mini, nbVoitures));
-		}
-		else {
-			voitures = getVoiture(param, mini, nbVoitures);
-			for (Voiture v : voitures) {
-				liste.put(v);
-			}
-			ret.put("voitures", liste);
-		}
-		ret.put("nbVoitures", liste.length());
-		return ret.toString();
-	}
-	
-	
-	
-	/**
-	 * Utilise le DAO pour insérer une voiture en base de données
-	 * @return Retourne true si l'insertion s'est déroulée avec succès
-	 */
-	@Path("add")
-	@POST
-	@Produces("application/json")
-	public String ajouterVoiture(String saisieJson) {
-		JSONObject json = new JSONObject(saisieJson);
-		boolean succes = false;
+	private Connection getConnexion() {
 		try {
-			Voiture v = voitureFromJson(json);
-			if (v.check()) {
-				vDao.ajouterVoiture(v);
-				succes = true;
+			Class.forName("com.mysql.cj.jdbc.Driver");
+			if (connection == null) {
+				connection = DriverManager.getConnection(getUrlBase(), Configuration.getConfig("bdd.utilisateur"), Configuration.getConfig("bdd.mdp"));
 			}
-			
-		} catch (SQLException sql) {
-			sql.printStackTrace();
+		} catch (SQLException sql) {sql.printStackTrace(); } 
+		catch (ClassNotFoundException e) {
+			e.printStackTrace();
 		}
-		JSONObject ret = new JSONObject();
-		ret.put("succes", succes);
-		return ret.toString();
+		return connection;
 	}
 	
-	/**
-	 * Utilise le DAO pour supprimer une voiture en base de données
-	 * @return Retourne true si l'insertion s'est déroulée avec succès
-	 */
-	@Path("del")
-	@POST
-	@Produces("application/json")
-	public String supprimerVoiture(String id) {
-		boolean succes = false;
-		try {
-			vDao.supprimerVoiture(id);
-			succes = true;
-		} catch (SQLException sql) {
-			sql.printStackTrace();
-		}
-		JSONObject ret = new JSONObject();
-		ret.put("succes", succes);
-		return ret.toString();
+	public String getUrlBase() {
+		String url = "jdbc:mysql://";
+		url += Configuration.getConfig("bdd.serveur");
+		url += ":" + Configuration.getConfig("bdd.port");
+		url += "/" + Configuration.getConfig("bdd.nom");
+		return url;
 	}
 	
-	/**
-	 * Récupère toutes les voitures en base
-	 * @return Retourne un ensemble de voitures sous forme de tableau de Voitures
-	 */
-	public Voiture[] getToutesVoitures(int mini, int nbVoitures) {
-		Voiture[] ret = new Voiture[16];
-		try {
-			ret = vDao.getVoitures(null, mini, nbVoitures);
-			/*vDao.getVoitures(null, mini, nbVoitures);
-			ret[0] = new Voiture();
-			ret[0].setAnnee(2008);
-			ret[0].setCarburant(Carburant.DIESEL);
-			ret[0].setFinition("Initiale");
-			ret[0].setId(1);
-			ret[0].setKm(174826);
-			ret[0].setMarque("Renault");
-			ret[0].setModele("VelSatis");
-			ret[0].setPrix(4600);
-			
-			ret[1] = new Voiture();
-			ret[1].setAnnee(2013);
-			ret[1].setCarburant(Carburant.DIESEL);
-			ret[1].setFinition("Business");
-			ret[1].setId(2);
-			ret[1].setKm(124987);
-			ret[1].setMarque("Renault");
-			ret[1].setModele("Scénic");
-			ret[1].setPrix(8800);
+	private void deconnecter() throws SQLException {
+		if(connection != null) {
+			connection.close();
+		}
+	}
+	
+	public void ajouterVoiture(Voiture voiture) throws SQLException {
+		String requete = "INSERT INTO Voiture (marque, modele, finition, carburant, km, annee, prix) VALUES  "
+				+ "(?,?,?,?,?,?,?)";
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
+		stmt.setString(1, voiture.getMarque());
+		stmt.setString(2, voiture.getModele());
+		stmt.setString(3, voiture.getFinition());
+		stmt.setString(4, voiture.getCarburant().toString());
+		stmt.setInt(5, voiture.getKm());
+		stmt.setInt(6, voiture.getAnnee());
+		stmt.setInt(7, voiture.getPrix());
+		stmt.executeUpdate();
+		deconnecter();
+	}
+	
+	public void modifierVoiture(int id, Voiture nouvelle) throws SQLException {
+		String requete = "UPDATE Voiture SET marque = ?, "
+				+ "modele = ?, "
+				+ "finition = ?, "
+				+ "carburant = ?, "
+				+ "km = ?, "
+				+ "annee = ?, "
+				+ "prix = ?), "
+				+ "WHERE id = ?";
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
+		stmt.setString(1, nouvelle.getMarque());
+		stmt.setString(2, nouvelle.getModele());
+		stmt.setString(3, nouvelle.getFinition());
+		//stmt.set(4, nouvelle.getCarburant().getChar());
+		stmt.setInt(5, nouvelle.getKm());
+		stmt.setInt(6, nouvelle.getAnnee());
+		stmt.setInt(7, nouvelle.getPrix());
+		stmt.setInt(8, id);
+		stmt.executeQuery();
+		deconnecter();
+	}
+	
+	public Voiture[] getVoiture(String saisie, int mini, int nbVoitures) throws SQLException {
+		HashMap<String, String> criteres = new HashMap<String, String>();
+		if(StringUtils.estEntier(saisie)) {
+			criteres.put("id", saisie);
+		} else {
+			criteres.put("masque", saisie);
+		}
+		Voiture[] ret = getVoitures(criteres, mini, nbVoitures);
+	//	if (ret.length > 0 && StringUtils.estEntier(saisie)) {
+			return ret;
+	//	}
+		//return null;
+	}
+	
+	public Voiture[] getVoitures(HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
+		String requete = "SELECT id, marque, modele, finition, carburant, km, annee, prix "
+				+ "FROM Voiture ";
+		String masque = null;
+		int nbCol = 0;
+		if (criteres != null && !criteres.isEmpty()) {
+			requete += "WHERE ";
+			masque = criteres.get("masque");
+			if (masque != null) {
+				requete += construireRequeteMasque(masque);
+				nbCol = StringUtils.nbOccurrence(requete, '?')/masque.split(" ").length;
+			} else {
+				for(String colonne : criteres.keySet()) {
+					requete += colonne + " = ?,";
+				}
+				//retrait de la dernière virgule
+				requete = requete.substring(0, requete.length()-1);
+			}
+		}
+		requete += " LIMIT ? OFFSET ?";
+		return null;
+		/*PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		int cpt =1;
+		if (criteres != null) {
+			if (masque == null) {
+				for(String colonne : criteres.keySet()) {
+					if("string".equals(Voiture.getTypeDonnee(colonne))) {
+						stmt.setString(cpt, criteres.get(colonne));
+					}
+					if("entier".equals(Voiture.getTypeDonnee(colonne))) {
+						stmt.setInt(cpt, Integer.parseInt(criteres.get(colonne)));
+					}
+					cpt++;
+				}
+			} else if (masque != null) {
+				String[] mots = masque.split(" ");
+				int indexMot = 0;
+				for (String mot : mots) {
+					for (int i=1; i< nbCol+1; i++) {
+						cpt = indexMot * nbCol + i;
+						stmt.setString(cpt, "%"+mot+"%");
+					}
+					indexMot++;
+				}
+			}
+		}
+		stmt.setInt(cpt++, mini);
+		stmt.setInt(cpt++, nbVoitures);
+		ResultSet res = stmt.executeQuery();
+		res.last();
+		Voiture[] ret = new Voiture[res.getRow()];
+		res.beforeFirst();
+		cpt = 0;
+		while (res.next()) {
+			ret[cpt++] = setVoiture(res);
+		}
+		deconnecter();
+		return ret;*/
+	}
+	
+	public String construireRequeteMasque(String saisie) {
+		StringBuilder sb = new StringBuilder();
+		String[] colonnes = {"marque", "modele", "finition", "carburant"};
+		String[] mots = saisie.split(" ");
+		boolean or = false;
+		for (int i=0; i<mots.length; i++) {
+			for (String col : colonnes) {
+				if (or) {
+					sb.append(" OR ");
+				}
+				sb.append(col);
+				sb.append(" like ? ");
+				or = true;
+			}
+		}
+		return sb.toString();
+	}
+	
+	private Voiture setVoiture(ResultSet res) throws SQLException {
+		Voiture ret = new Voiture();
+		ret.setId(res.getInt("id"));
+		ret.setMarque(res.getString("marque"));
+		ret.setModele(res.getString("modele"));
+		ret.setFinition(res.getString("finition"));
+		ret.setCarburant(Carburant.get(res.getString("carburant")));
+		ret.setKm(res.getInt("km"));
+		ret.setAnnee(res.getInt("annee"));
+		ret.setPrix(res.getInt("prix"));
+		return ret;
+	}
+	
+	public void supprimerVoiture(String id) throws SQLException {
+		String requete = "DELETE FROM Voiture WHERE id = ?";
+		PreparedStatement stmt = getConnexion().prepareStatement(requete);
+		stmt.setString(1, id);
+		stmt.executeUpdate();
+		deconnecter();
+	}
 
-			ret[2] = new Voiture();
-			ret[2].setAnnee(2018);
-			ret[2].setCarburant(Carburant.DIESEL);
-			ret[2].setFinition("Feel");
-			ret[2].setId(3);
-			ret[2].setKm(78730);
-			ret[2].setMarque("Citroën");
-			ret[2].setModele("Spacetourer");
-			ret[2].setPrix(29000);
-			
-			for (int i=3; i< ret.length; i++) {
-				ret[i] = ret[i%3];
-			}*/
-		} catch (SQLException sql) {
-			sql.printStackTrace();
-		}
-		return ret;
-	}
-	
-	/**
-	 * Utilise le DAO pour obtenir les informations d'une voiture à partir de son ID 
-	 * @param id L'ID de la voiture à récupérer en base
-	 * @return Retourne une voiture sous forme d'objet voiture
-	 */
-	public Voiture[] getVoiture(String param, int mini, int nbVoitures) {
-		Voiture[] ret = null;
-		try {
-			ret = vDao.getVoiture(param, mini, nbVoitures);
-		} catch (SQLException sql) {
-			sql.printStackTrace();
-		}
-		return ret;
-	}
-	
-	public Voiture voitureFromJson(JSONObject json) {
-		Voiture voiture = new Voiture();
-		if(json.has("id")) {
-			voiture.setId(json.getInt("id"));
-		} if(json.has("marque")) {
-			voiture.setMarque(json.getString("marque"));
-		} if(json.has("modele")) {
-			voiture.setModele(json.getString("modele"));
-		} if(json.has("finition")) {
-			voiture.setFinition(json.getString("finition"));
-		} if(json.has("carburant")) {
-			voiture.setCarburant(Carburant.get(json.getString("carburant")));
-		} if(json.has("km")) {
-			voiture.setKm(json.getInt("km"));
-		} if(json.has("annee")) {
-			voiture.setAnnee(json.getInt("annee"));
-		} if(json.has("prix")) {
-			voiture.setPrix(json.getInt("prix"));
-		}
-		return voiture;
-	}
 }
