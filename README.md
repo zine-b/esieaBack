@@ -8,7 +8,9 @@ Ce projet contient le code de la partie Back du projet Stock Car. Il est compos�
 
 # Installation
 
-1. Déployer le fichier War dans un serveur d'application
-2. Modifier le fichier de configuration
-
-3. Tester le fonctionnement de l'API en lançant une requête exemple : http://localhost:8080/
+1. Déployer le fichier War dans un serveur d'application (Tomcat)
+2. Arrêter le server d'application (Tomcat)
+3. Modifier le fichier de configuration situé dans webapps/esieaBack/WEB-INF/conf.properties
+4. Redémarrer le serveur d'application (Tomcat)
+5. Tester le fonctionnement de l'API en lançant une requête exemple : http://localhost:8080/esieaBack/rest/voiture/get/all
+6. Un ensemble de voitures au format Json apparaît sur la page
