@@ -13,6 +13,7 @@ import javax.ws.rs.QueryParam;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import esiea.dao.ReponseVoiture;
 import esiea.dao.VoitureDAO;
 import esiea.metier.Voiture;
 import esiea.metier.Voiture.Carburant;
@@ -27,7 +28,7 @@ public class VoitureAPI {
 	@GET
 	@Produces("application/json")
 	public String getVoituresJson(@PathParam("param") String param) {
-		return getVoituresJson(param, "1", "1");
+		return getVoituresJson(param, "-1", "-1");
 	}
 	
 	@Path("get/{param}/{mini}/{nbVoitures}")
@@ -37,26 +38,31 @@ public class VoitureAPI {
 			@PathParam("mini") String miniS, 
 			@PathParam("nbVoitures") String nbVoituresS) {
 		int mini = Integer.parseInt(miniS), nbVoitures = Integer.parseInt(nbVoituresS);
-		Voiture[] voitures;
+		ReponseVoiture reponse;
 		JSONObject ret = new JSONObject();
 		JSONArray liste = new JSONArray();
 		if ("all".equals(param)) { 
-			voitures = getToutesVoitures(mini, nbVoitures);
-			for (Voiture v : voitures) {
+			reponse = getToutesVoitures(mini, nbVoitures);
+			for (Voiture v : reponse.getData()) {
 				liste.put(v);
 			}
 			ret.put("voitures", liste);
+			ret.put("volume", reponse.getVolume());
 		} else  if (StringUtils.estEntier(param)){
-			ret.put("voiture", getVoiture(param, mini, nbVoitures));
+			reponse = getReponse(param, mini, nbVoitures);
+			if (reponse.getData().length > 0) {
+				ret.put("voiture", reponse.getData()[0]);
+				ret.put("volume", 1);
+			}
 		}
 		else {
-			voitures = getVoiture(param, mini, nbVoitures);
-			for (Voiture v : voitures) {
+			reponse = getReponse(param, mini, nbVoitures);
+			for (Voiture v : reponse.getData()) {
 				liste.put(v);
 			}
 			ret.put("voitures", liste);
+			ret.put("volume", reponse.getVolume());
 		}
-		ret.put("nbVoitures", liste.length());
 		return ret.toString();
 	}
 	
@@ -111,8 +117,8 @@ public class VoitureAPI {
 	 * Récupère toutes les voitures en base
 	 * @return Retourne un ensemble de voitures sous forme de tableau de Voitures
 	 */
-	public Voiture[] getToutesVoitures(int mini, int nbVoitures) {
-		Voiture[] ret = new Voiture[16];
+	public ReponseVoiture getToutesVoitures(int mini, int nbVoitures) {
+		ReponseVoiture ret = new ReponseVoiture();
 		try {
 			ret = vDao.getVoitures(null, mini, nbVoitures);
 			/*vDao.getVoitures(null, mini, nbVoitures);
@@ -160,10 +166,10 @@ public class VoitureAPI {
 	 * @param id L'ID de la voiture à récupérer en base
 	 * @return Retourne une voiture sous forme d'objet voiture
 	 */
-	public Voiture[] getVoiture(String param, int mini, int nbVoitures) {
-		Voiture[] ret = null;
+	public ReponseVoiture getReponse(String param, int mini, int nbVoitures) {
+		ReponseVoiture ret = new ReponseVoiture();
 		try {
-			ret = vDao.getVoiture(param, mini, nbVoitures);
+			ret = vDao.rechercherVoitures(param, mini, nbVoitures);
 		} catch (SQLException sql) {
 			sql.printStackTrace();
 		}

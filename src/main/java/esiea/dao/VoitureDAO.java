@@ -7,6 +7,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import org.apache.log4j.Logger;
+
 import esiea.metier.Voiture;
 import esiea.metier.Voiture.Carburant;
 import utils.Configuration;
@@ -15,6 +17,7 @@ import utils.StringUtils;
 public class VoitureDAO {
 	
 	private Connection connection;
+	protected static final Logger logger = Logger.getLogger(VoitureDAO.class);
 	
 	public VoitureDAO() {
 		
@@ -26,10 +29,13 @@ public class VoitureDAO {
 			if (connection == null) {
 				connection = DriverManager.getConnection(getUrlBase(), Configuration.getConfig("bdd.utilisateur"), Configuration.getConfig("bdd.mdp"));
 			}
-		} catch (SQLException sql) {sql.printStackTrace(); } 
+		} catch (SQLException sql) {
+			sql.printStackTrace(); 
+			logger.debug("Impossible de se connecter à la base !" + sql);} 
 		catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
+		logger.debug("Connexion à la base OK !" + connection);
 		return connection;
 	}
 	
@@ -84,42 +90,64 @@ public class VoitureDAO {
 		deconnecter();
 	}
 	
-	public Voiture[] getVoiture(String saisie, int mini, int nbVoitures) throws SQLException {
+	public ReponseVoiture rechercherVoitures(String saisie, int mini, int nbVoitures) throws SQLException {
 		HashMap<String, String> criteres = new HashMap<String, String>();
 		if(StringUtils.estEntier(saisie)) {
 			criteres.put("id", saisie);
 		} else {
 			criteres.put("masque", saisie);
 		}
-		Voiture[] ret = getVoitures(criteres, mini, nbVoitures);
-	//	if (ret.length > 0 && StringUtils.estEntier(saisie)) {
-			return ret;
-	//	}
-		//return null;
+		return getVoitures(criteres, mini, nbVoitures);
 	}
 	
-	public Voiture[] getVoitures(HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
+	public ReponseVoiture getVoitures(HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
 		String requete = "SELECT id, marque, modele, finition, carburant, km, annee, prix "
-				+ "FROM Voiture ";
+				+ "FROM Voiture ",
+				requeteComptage = "SELECT COUNT(*) FROM Voiture ";
 		String masque = null;
+		ReponseVoiture ret = new ReponseVoiture();
 		int nbCol = 0;
 		if (criteres != null && !criteres.isEmpty()) {
 			requete += "WHERE ";
+			requeteComptage += "WHERE ";
 			masque = criteres.get("masque");
 			if (masque != null) {
 				requete += construireRequeteMasque(masque);
+				requeteComptage += construireRequeteMasque(masque);
 				nbCol = StringUtils.nbOccurrence(requete, '?')/masque.split(" ").length;
 			} else {
 				for(String colonne : criteres.keySet()) {
 					requete += colonne + " = ?,";
+					requeteComptage += colonne + " = ?,";
 				}
 				//retrait de la derniÃ¨re virgule
 				requete = requete.substring(0, requete.length()-1);
+				requeteComptage = requeteComptage.substring(0, requeteComptage.length()-1);
 			}
 		}
-		requete += " LIMIT ? OFFSET ?";
-		return null;
-		/*PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+		if (nbVoitures > 1 && mini >= 0) {
+			requete += " LIMIT ? OFFSET ?";
+		}
+		PreparedStatement pstmt = getPreparedStatemnt (requete, masque, nbCol, criteres, mini, nbVoitures);
+		ResultSet res = pstmt.executeQuery();
+		res.last();
+		ret.setData(new Voiture[res.getRow()]);
+		res.beforeFirst();
+		int cpt = 0;
+		while (res.next()) {
+			ret.setData(setVoiture(res), cpt++);
+		}
+		pstmt = getPreparedStatemnt (requeteComptage, masque, nbCol, criteres, -1, -1);
+		res = pstmt.executeQuery();
+		if (res.next()) {
+			ret.setVolume(res.getInt(1));
+		}
+		deconnecter();
+		return ret;
+	}
+	
+	private PreparedStatement getPreparedStatemnt (String requete, String masque, int nbCol, HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
+		PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 		int cpt =1;
 		if (criteres != null) {
 			if (masque == null) {
@@ -142,20 +170,14 @@ public class VoitureDAO {
 					}
 					indexMot++;
 				}
+				cpt++;
 			}
 		}
-		stmt.setInt(cpt++, mini);
-		stmt.setInt(cpt++, nbVoitures);
-		ResultSet res = stmt.executeQuery();
-		res.last();
-		Voiture[] ret = new Voiture[res.getRow()];
-		res.beforeFirst();
-		cpt = 0;
-		while (res.next()) {
-			ret[cpt++] = setVoiture(res);
+		if (nbVoitures > 1 && mini >= 0) {
+			stmt.setInt(cpt++, nbVoitures);
+			stmt.setInt(cpt++, mini);
 		}
-		deconnecter();
-		return ret;*/
+		return stmt;
 	}
 	
 	public String construireRequeteMasque(String saisie) {
