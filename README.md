@@ -8,7 +8,7 @@ Ce projet contient le code de la partie Back du projet Stock Car. Il est compos�
 
 # Installation
 
-1. Déployer le fichier War dans un serveur d'application (Tomcat)
+1. Déployer le fichier War (dans target) dans un serveur d'application (Tomcat)
 2. Arrêter le server d'application (Tomcat)
 3. Modifier le fichier de configuration situé dans webapps/esieaBack/WEB-INF/conf.properties
 4. Redémarrer le serveur d'application (Tomcat)
