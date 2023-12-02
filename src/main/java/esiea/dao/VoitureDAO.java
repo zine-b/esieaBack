@@ -15,8 +15,9 @@ import utils.Configuration;
 import utils.StringUtils;
 
 public class VoitureDAO {
-	
-	private Connection connection;
+
+
+	public static Connection connection;
 	protected static final Logger logger = Logger.getLogger(VoitureDAO.class);
 	
 	public VoitureDAO() {
@@ -31,11 +32,11 @@ public class VoitureDAO {
 			}
 		} catch (SQLException sql) {
 			sql.printStackTrace(); 
-			logger.debug("Impossible de se connecter à la base !" + sql);} 
+			logger.debug("Impossible de se connecter ï¿½ la base !" + sql);} 
 		catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		}
-		logger.debug("Connexion à la base OK !" + connection);
+		logger.debug("Connexion ï¿½ la base OK !" + connection);
 		return connection;
 	}
 	
@@ -49,7 +50,7 @@ public class VoitureDAO {
 	
 	private void deconnecter() throws SQLException {
 		if(connection != null) {
-			connection.close();
+			//connection.close();
 		}
 	}
 	
@@ -69,14 +70,7 @@ public class VoitureDAO {
 	}
 	
 	public void modifierVoiture(int id, Voiture nouvelle) throws SQLException {
-		String requete = "UPDATE Voiture SET marque = ?, "
-				+ "modele = ?, "
-				+ "finition = ?, "
-				+ "carburant = ?, "
-				+ "km = ?, "
-				+ "annee = ?, "
-				+ "prix = ?), "
-				+ "WHERE id = ?";
+		String requete = "UPDATE Voiture SET marque = ?, modele = ?, finition = ?, carburant = ?, km = ?, annee = ?, prix = ? WHERE id = ?";
 		PreparedStatement stmt = getConnexion().prepareStatement(requete);
 		stmt.setString(1, nouvelle.getMarque());
 		stmt.setString(2, nouvelle.getModele());
@@ -145,7 +139,7 @@ public class VoitureDAO {
 		deconnecter();
 		return ret;
 	}
-	
+
 	private PreparedStatement getPreparedStatemnt (String requete, String masque, int nbCol, HashMap<String, String> criteres, int mini, int nbVoitures) throws SQLException {
 		PreparedStatement stmt = getConnexion().prepareStatement(requete, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 		int cpt =1;
@@ -179,7 +173,7 @@ public class VoitureDAO {
 		}
 		return stmt;
 	}
-	
+
 	public String construireRequeteMasque(String saisie) {
 		StringBuilder sb = new StringBuilder();
 		String[] colonnes = {"marque", "modele", "finition", "carburant"};
@@ -197,7 +191,7 @@ public class VoitureDAO {
 		}
 		return sb.toString();
 	}
-	
+
 	private Voiture setVoiture(ResultSet res) throws SQLException {
 		Voiture ret = new Voiture();
 		ret.setId(res.getInt("id"));
