@@ -1,1 +1,7 @@
-esiea\dao\VoitureDAOIntegrationTest.class
+utils/StringUtilsTest.class
+esiea/api/VoitureAPITest.class
+esiea/dao/VoitureDAOIntegrationTest.class
+esiea/metier/VoitureTest.class
+config/TestConfig.class
+config/TestConfig$H2DatabaseConfig.class
+esiea/api/VoitureAPIIntegrationTest.class
